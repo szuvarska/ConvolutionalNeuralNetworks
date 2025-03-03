@@ -7,8 +7,8 @@
 * w całości nasza (różne wersje z regularyzacją, liczbą warstw, liczbą neuronów itd.)
 
 2. Testy z różnymi technikami augmentacji dla różnego procenta przerobionych danych
-3. Testy z ograniczonym zbiorem danych do 30? 100? na kategorię (few-shot learning)
-4. Ensemble - stacking
+3. Testy z ograniczonym zbiorem danych do 30-100 obserwacji na kategorię (few-shot learning) to bedzie ciezkie
+4. Ensemble - prawdopodobnie stacking
 
 ## Zadania
 * Ogarnąć środowisko - oboje do 4.03
