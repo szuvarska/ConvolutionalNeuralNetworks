@@ -1,9 +1,18 @@
-## Project Description 
+# Project I - Convolutional Neural Networks
 
+## Team
+- Mateusz Nizwantowski
+- Marta Szuwarska
 
-## Data augmentation 
-
-We choose an unusual method to test data augmentation. We will test several (two or three) architectures on 100% of the data, 80%, 60%, 40%, and 20%. Those tests will be treated as points of reference. Then, we will create models based on datasets where the number of observations is equal to the full original dataset, but we generate a fraction of that observation using different argumentation techniques. 
-
-Thanks to designing the experiment this way, we achieved two things:
- - we have clear points of reference that allow us to meaningfully measure model performance in comparison to
+## Project Plan
+1. Prepare the environment
+2. Test a simple model
+3. Define architectures for comparison
+4. Implement architectures in TensorFlow
+5. Test hyperparameters and regularization for each architecture
+5. Implement data augmentation techniques
+6. Test architectures with different data augmentation techniques
+6. Implement a method for few-shot learning
+7. Test architectures with few-shot learning
+8. Optional: implement ensemble methods
+9. Write the report
