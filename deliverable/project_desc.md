@@ -1,10 +1,24 @@
-# Project Details
+## Project Details
 This is the report for the first project in the Deep Learning course in Data Science Masters at the Faculty of Mathematics and Information Science. It aims to introduce us to convolutional neural networks and develop intuitions related to them. We were informed that this work's goal is purely educational and research-focused, so we aim not to create the best recognition model but to learn as much as possible.
 
 ## Project Description 
 
+The exact topic of this project is "Image classification with convolutional neural networks". We have been given the data set "CINIC-10", which we must use for this project. Things that have to be included in this report:
 
-## Data augmentation 
+1. Test and compare different network architectures (at least one should be a convolutional neural network).
+    - Investigate the influence of the following hyper-parameter change on obtained results:
+        - At least 2 hyper-parameters related to training process.
+        - At least 2 hyper-parameters related to regularization.
+    - Investigate the influence of at least x data augmentation techniques from the following groups:
+        - Standard operations (x = 3).
+        - More advanced data augmentation techniques like cutmix, cutout, or AutoAugment (x = 1).
+2. Implement one method dedicated to few-shot learning.
+    - Reduce the size of the training set and compare the obtained results with those trained on the entire dataset (from the previous point).
+3. Consider the application of ensemble (hard/soft voting, stacking).
+
+
+
+### Data augmentation 
 
 We choose an unusual method to test data augmentation. We will test several (two or three) architectures on 100% of the data, 80%, 60%, 40%, and 20%. Those tests will be treated as points of reference. Then, we will create models based on datasets where the number of observations is equal to the full original dataset, but we generate a fraction of that observation using different argumentation techniques. 
 
