@@ -17,7 +17,9 @@ The exact topic of this project is "Image classification with convolutional neur
 3. Consider the application of ensemble (hard/soft voting, stacking).
 
 ## Dataset Description
-CINIC-10 is a dataset designed for image classification, and it was designed to serve as a bridge between the widely used CIFAR-10 dataset and the significantly larger ImageNet dataset. Images are split into three subsets: training, validation, and testing. Like CIFAR-10, CINIC-10 includes 10 different classes, which are categories into which the images are grouped. These classes are the same as those found in CIFAR-10, and they are:
+[CINIC-10](https://www.kaggle.com/datasets/mengcius/cinic10) is a dataset for image classification, and it was designed to serve as a bridge between the widely used CIFAR-10 dataset and the significantly larger ImageNet dataset. Images are split into three subsets: training, validation, and testing. 
+
+Like CIFAR-10, CINIC-10 includes 10 different classes, which are categories into which the images are grouped. These classes are:
 
 1. **Airplane**
 2. **Automobile**
@@ -32,10 +34,12 @@ CINIC-10 is a dataset designed for image classification, and it was designed to 
 
 Each class has 9,000 images in each of the three subsets (training, validation, and testing), so in total, there are 90,000 images per subset and 270,000 images in the whole dataset. The images in CINIC-10 come from two different sources: 60,000 images are from CIFAR-10, and the remaining 210,000 images are from ImageNet, but they have been resized to 32x32 pixels to match the size of the CIFAR-10 images. 
 
+CINIC-10 is particularly useful for training and testing image classification models that require more data than CIFAR-10 but are not yet ready for the computational complexity of the full ImageNet dataset, making it an ideal choice for learning deep learning models without extensive computing power.
 
 After some research, we found that the best model trained on this data is `VIT-L/16`. It was introduced in this [paper](http://arxiv.org/pdf/2305.03238v6), and it achieved 95.5% accuracy. Other models worth mentioning are `DenseNet-121` with 91.26%, `ResNEt-18` with 90.27% and `VGG-16` with 87.77% accuracy.
 
-
+**Idk if we want it in final report**
+but i found [website](https://paperswithcode.com/dataset/cinic-10) with papers about this dataset so we might take a look at it at some point 
 ## Plan of experiments  
 
 ### Data augmentation 
