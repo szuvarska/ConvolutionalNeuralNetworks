@@ -43,22 +43,23 @@ but i found [website](https://paperswithcode.com/dataset/cinic-10) with papers a
 
 ## Plan of experiments  
 
-**I guess this part will not be included in final report and if so it has to be rewritten**
-1. Create CNN implementation in pytorch and check parameters (time of training, accuracy, loss function)
-2. Tweak this for example add one more convolutional layer, different learning rate, max pooling instead of average polling or other way around, maybe tweak number of neurons. Play with blueprint created in first experiment. Compare it to ready architecture from internet, and ready model. With ready architecture use all random weights and kernels and other variant with random weights but not kernels. 
-3. Apply regularization to weights in fully connected layer, check results, if possible apply regularization to kernel functions. Try with l1 and l2, maybe elastic net. Search for different methods.
-4. Data augmentation as described bellow
+
+**I guess this part will not be included in the final report and if so it has to be rewritten**
+1. Create CNN implementation in PyTorch and check parameters (time of training, accuracy, loss function)
+2. Tweak this. For example, add one more convolutional layer, a different learning rate, max pooling instead of average polling, or the other way around, and maybe tweak a number of neurons. Play with the blueprint created in the first experiment. Compare it to ready architecture from the internet and ready model. With ready architecture, use all random weights and kernels and another variant with random weights but not kernels. 
+3. Apply regularization to weights in the fully connected layer, check results, and if possible, apply regularization to kernel functions. Try with l1 and l2, maybe elastic net. Search for different methods.
+4. Data augmentation as described below
     - rotations
     - flipping
     - cropping
     - brightness adjustment 
     - color jitter
-    - gaussian noise
-    - some combination of those (lot of experiments)
+    - Gaussian noise
+    - some combination of those (a lot of experiments)
     - cutoff
     - maybe AutoAugment
-5. Few shot learning something we don't know yet
-6. Probably stacking but it seems easy so we can implement soft voting as well. One thing to remember is that those models should varied fundamentally. Because if those models extract the same information from image then combining it does not help 
+5. Few-shot learning something we don't know yet
+6. Probably stacking, but it seems easy, so we can implement soft voting as well. One thing to remember is that those models should vary fundamentally. If those models extract the same information from the image, then combining it does not help 
 
 
 ## Description of particular experiments
