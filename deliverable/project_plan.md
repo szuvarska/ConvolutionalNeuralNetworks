@@ -8,7 +8,7 @@
 1. Prepare the environment
 2. Test a simple model
 3. Define architectures for comparison
-4. Implement architectures in TensorFlow
+4. Implement architectures in PyTorch
 5. Test hyperparameters and regularization for each architecture
 5. Implement data augmentation techniques
 6. Test architectures with different data augmentation techniques
