@@ -40,8 +40,25 @@ After some research, we found that the best model trained on this data is `VIT-L
 
 **Idk if we want it in final report**
 but i found [website](https://paperswithcode.com/dataset/cinic-10) with papers about this dataset so we might take a look at it at some point 
+
 ## Plan of experiments  
 
+**I guess this part will not be included in final report and if so it has to be rewritten**
+1. Create CNN implementation in pytorch and check parameters (time of training, accuracy, loss function)
+2. Tweak this for example add one more convolutional layer, different learning rate, max pooling instead of average polling or other way around, maybe tweak number of neurons. Play with blueprint created in first experiment. Compare it to ready architecture from internet, and ready model. With ready architecture use all random weights and kernels and other variant with random weights but not kernels. 
+3. Apply regularization to weights in fully connected layer, check results, if possible apply regularization to kernel functions. Try with l1 and l2, maybe elastic net. Search for different methods.
+4. Data augmentation as described bellow
+    - rotations
+    - flipping
+    - cropping
+    - brightness adjustment 
+    - color jitter
+    - gaussian noise
+    - some combination of those (lot of experiments)
+    - cutoff
+    - maybe AutoAugment
+5. Few shot learning something we don't know yet
+6. Probably stacking but it seems easy so we can implement soft voting as well. One thing to remember is that those models should varied fundamentally. Because if those models extract the same information from image then combining it does not help 
 
 
 ## Description of particular experiments
@@ -59,7 +76,7 @@ Thanks to designing the experiment this way, we achieved two things:
  - we have clear points of reference that allow us to meaningfully measure model performance and thus different methods of augmentation
  - if we increase the number of observations, we would have to train a model for longer, requiring even more processing power, which we lack. The constant size of datasets results in a predictable training time, an important characteristic with such a short project time span. We will be able to test (and, because of it, learn) more in this project. Final performance is not as important as it is a research project.
 
- The convolutional neural network created in this experiment will be fairly simple. We plan to run each configuration multiple times to get an estimate of variance, and there are a lot of hyperparameters. In order to complete this section on time, we must make some compromises.
+ The convolutional neural network created in this experiment will be fairly simple. We plan to run each configuration multiple times to get an estimate of variance, and there are a lot of hyper-parameters. In order to complete this section on time, we must make some compromises.
 
  ### Few shot learning
 
