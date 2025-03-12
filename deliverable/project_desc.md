@@ -46,7 +46,7 @@ but i found [website](https://paperswithcode.com/dataset/cinic-10) with papers a
 **I guess this part will not be included in the final report and if so it has to be rewritten**
 
 1. Create CNN implementation in PyTorch and check parameters (time of training, accuracy, loss function)
-2. Tweak this. For example, add one more convolutional layer, a different learning rate, max pooling instead of average polling, or the other way around, and maybe tweak a number of neurons. Play with the blueprint created in the first experiment. Compare it to ready architecture from the internet and ready model. With ready architecture, use all random weights and kernels and another variant with random weights but not kernels.
+2. Tweak this. For example, add one more convolutional layer, a different learning rate (learning rate scheduling), max pooling instead of average polling, or the other way around, and maybe tweak a number of neurons. Different kernel sizes and so on. Play with the blueprint created in the first experiment. Compare it to ready architecture from the internet and ready model. With ready architecture, use all random weights and kernels and another variant with random weights but not kernels.
 3. Apply regularization to weights in the fully connected layer, check results, and if possible, apply regularization to kernel functions. Try with l1 and l2, maybe elastic net, dropout and if there is enough time then combination of those.
 4. Data augmentation as described below
     - rotations
