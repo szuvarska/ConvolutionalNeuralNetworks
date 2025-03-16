@@ -17,3 +17,8 @@ This is the repository for the first project in the Deep Learning course in Data
 * Train simple model (mainly if its working and how long does the training takes) - both till 4.03
 * Research few-shot learning - Marta till 9.03
 * Research augmentation techniques - Mateusz till 9.03
+
+
+## Next steps
+- write code to specify experiments as a dict or smth like this
+- write code to queue experiments and save them automatically
