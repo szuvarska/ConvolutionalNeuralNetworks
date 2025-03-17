@@ -29,3 +29,4 @@ This is the repository for the first project in the Deep Learning course in Data
 * how do the distributions on given outputs look like (correct classification, bad classification, bad classification - one class)? Is the model sure or unsure? Can we return the label "unsure"
 * visualize output from the best enhanced model
 * create a marimo notebook where you show the augmentation techniques
+* how does sota model performs, how does our model performs on correct and incorrectly classified samples from sota model, check incorrectly classified samples maybe they are miss labeled
