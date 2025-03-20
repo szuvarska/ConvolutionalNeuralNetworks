@@ -7,7 +7,8 @@ def train_step(model: torch.nn.Module,
                loss_fn: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                accuracy_fn,
-               device: torch.device):
+               device: torch.device,
+               silent=False):
     train_loss, train_acc = 0, 0
     model.to(device)
     for batch, (X, y) in enumerate(data_loader):
@@ -35,13 +36,16 @@ def train_step(model: torch.nn.Module,
     # Calculate loss and accuracy per epoch and print out what's happening
     train_loss /= len(data_loader)
     train_acc /= len(data_loader)
-    print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
+    if not silent:
+        print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
+    return float(train_loss), train_acc
 
 def test_step(data_loader: torch.utils.data.DataLoader,
               model: torch.nn.Module,
               loss_fn: torch.nn.Module,
               accuracy_fn,
-              device: torch.device):
+              device: torch.device,
+              silent=False):
     test_loss, test_acc = 0, 0
     model.to(device)
     model.eval() # put model in eval mode
@@ -63,7 +67,9 @@ def test_step(data_loader: torch.utils.data.DataLoader,
         # Adjust metrics and print out
         test_loss /= len(data_loader)
         test_acc /= len(data_loader)
-        print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+        if not silent:
+            print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+    return float(test_loss), test_acc
 
 def accuracy_fn(y_true, y_pred):
     correct = torch.eq(y_true, y_pred).sum().item()
