@@ -26,7 +26,7 @@ This is the repository for the first project in the Deep Learning course in Data
 * write code to specify experiments as a dict or smth like this
 * write code to queue experiments and save them automatically
 * how stable and reliable are our methods train test baseline and enhanced in two complication modes multiple times and compare how they learn over epochs are converging (this can be the same test as in overfitting)
-* how do the distributions on given outputs look like (correct classification, bad classification, bad classification - one class)? Is the model sure or unsure? Can we return the label "unsure"
+* how do the distributions on given outputs look like (correct classification, bad classification, bad classification - one class)? Is the model sure or unsure? Can we return the label "unsure", pass noise to the model and see how honfident it is in prediction (in theory it should be very confident on noise)
 * visualize output from the best enhanced model
 * create a marimo notebook where you show the augmentation techniques
 * how does sota model performs, how does our model performs on correct and incorrectly classified samples from sota model, check incorrectly classified samples maybe they are miss labeled
