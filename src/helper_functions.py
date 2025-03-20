@@ -38,7 +38,7 @@ def train_step(model: torch.nn.Module,
     train_acc /= len(data_loader)
     if not silent:
         print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
-    return train_loss, train_acc
+    return float(train_loss), train_acc
 
 def test_step(data_loader: torch.utils.data.DataLoader,
               model: torch.nn.Module,
@@ -69,7 +69,7 @@ def test_step(data_loader: torch.utils.data.DataLoader,
         test_acc /= len(data_loader)
         if not silent:
             print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
-    return test_loss, test_acc
+    return float(test_loss), test_acc
 
 def accuracy_fn(y_true, y_pred):
     correct = torch.eq(y_true, y_pred).sum().item()
