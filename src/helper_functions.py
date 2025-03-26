@@ -1,5 +1,6 @@
 import torch
-
+from tqdm.auto import tqdm
+from timeit import default_timer as timer
 
 
 def train_step(model: torch.nn.Module,
@@ -80,3 +81,43 @@ def print_train_time(start, end, device=None):
     total_time = end - start
     print(f"\nTrain time on {device}: {total_time:.3f} seconds")
     return total_time
+
+def run_model(cinic_train, cinic_test, model, loss_fn, optimizer, device, epochs=3, silent=True):
+    time_start = timer()
+    metrics = {
+        "train_loss": [],
+        "train_acc": [],
+        "test_loss": [],
+        "test_acc": []
+    }
+    
+    # Train and test model
+    for epoch in tqdm(range(epochs)):
+        train_loss, train_acc = train_step(data_loader=cinic_train, 
+            model=model, 
+            loss_fn=loss_fn,
+            optimizer=optimizer,
+            accuracy_fn=accuracy_fn,
+            device=device,
+            silent=silent
+        )
+        test_loss, test_acc = test_step(data_loader=cinic_test,
+            model=model,
+            loss_fn=loss_fn,
+            accuracy_fn=accuracy_fn,
+            device=device,
+            silent=silent
+        )
+
+        # Append the metrics to the respective lists
+        metrics["train_loss"].append(train_loss)
+        metrics["train_acc"].append(train_acc)
+        metrics["test_loss"].append(test_loss)
+        metrics["test_acc"].append(test_acc)
+
+    time_end = timer()
+    total_time = print_train_time(start=time_start,
+                                  end=time_end,
+                                  device=device)
+    
+    return metrics, total_time

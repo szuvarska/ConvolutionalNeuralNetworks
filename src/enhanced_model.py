@@ -3,7 +3,7 @@ from torch import nn
 
 
 class EnhancedModel(nn.Module):
-    def __init__(self, input_shape: int, hidden_units: int, output_shape: int):
+    def __init__(self, input_shape: int, hidden_units: int, output_shape: int, dropout_p: float = 0.5):
         super().__init__()
         
         # Block 1: First set of convolutional layers
@@ -53,7 +53,7 @@ class EnhancedModel(nn.Module):
         # Fully connected layer (classifier)
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Dropout(0.5),  # Add dropout to prevent overfitting
+            nn.Dropout(dropout_p),  # Add dropout to prevent overfitting
             nn.Linear(in_features=hidden_units*4, out_features=output_shape)
         )
     
