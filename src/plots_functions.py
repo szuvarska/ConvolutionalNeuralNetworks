@@ -10,6 +10,7 @@ def multiple_runs_with_uncertainty_band(metrics_list, title_accuracy, title_loss
     train_acc_list = [metrics["train_acc"] for metrics in metrics_list]
     test_acc_list = [metrics["test_acc"] for metrics in metrics_list]
     epochs = len(train_acc_list[0])
+    num_of_runs = len(train_acc_list)
 
     avg_train_acc = np.mean(train_acc_list, axis=0)
     std_train_acc = np.std(train_acc_list, axis=0)
@@ -38,7 +39,7 @@ def multiple_runs_with_uncertainty_band(metrics_list, title_accuracy, title_loss
     plt.plot(
         range(epochs),
         avg_train_acc,
-        label=f"Avg Train Accuracy over {epochs} runs",
+        label=f"Avg Train Accuracy over {num_of_runs} runs",
         color="blue",
         linestyle="--",
         linewidth=4,
@@ -46,7 +47,7 @@ def multiple_runs_with_uncertainty_band(metrics_list, title_accuracy, title_loss
     plt.plot(
         range(epochs),
         avg_test_acc,
-        label=f"Avg Test Accuracy over {epochs} runs",
+        label=f"Avg Test Accuracy over {num_of_runs} runs",
         color="red",
         linestyle="--",
         linewidth=4,
@@ -92,7 +93,7 @@ def multiple_runs_with_uncertainty_band(metrics_list, title_accuracy, title_loss
     plt.plot(
         range(epochs),
         avg_train_loss,
-        label=f"Avg Train Loss over {epochs} runs",
+        label=f"Avg Train Loss over {num_of_runs} runs",
         color="blue",
         linestyle="--",
         linewidth=4,
@@ -100,7 +101,7 @@ def multiple_runs_with_uncertainty_band(metrics_list, title_accuracy, title_loss
     plt.plot(
         range(epochs),
         avg_test_loss,
-        label=f"Avg Test Loss over {epochs} runs",
+        label=f"Avg Test Loss over {num_of_runs} runs",
         color="red",
         linestyle="--",
         linewidth=4,
@@ -123,6 +124,7 @@ def multiple_runs_with_every_run(metrics_list, title_accuracy, title_loss):
     train_acc_list = [metrics["train_acc"] for metrics in metrics_list]
     test_acc_list = [metrics["test_acc"] for metrics in metrics_list]
     epochs = len(train_acc_list[0])
+    num_of_runs = len(train_acc_list)
 
     for i, metrics in enumerate(metrics_list):
         plt.plot(range(epochs), metrics["train_acc"], color="blue", alpha=0.2)
@@ -133,7 +135,7 @@ def multiple_runs_with_every_run(metrics_list, title_accuracy, title_loss):
     plt.plot(
         range(epochs),
         avg_train_loss,
-        label=f"Avg Train Accuracy over {epochs} runs",
+        label=f"Avg Train Accuracy over {num_of_runs} runs",
         color="blue",
         linestyle="--",
         linewidth=4,
@@ -144,7 +146,7 @@ def multiple_runs_with_every_run(metrics_list, title_accuracy, title_loss):
     plt.plot(
         range(epochs),
         avg_test_loss,
-        label=f"Avg Test Accuracy over {epochs} runs",
+        label=f"Avg Test Accuracy over {num_of_runs} runs",
         color="red",
         linestyle="--",
         linewidth=4,
@@ -174,7 +176,7 @@ def multiple_runs_with_every_run(metrics_list, title_accuracy, title_loss):
     plt.plot(
         range(epochs),
         avg_train_loss,
-        label=f"Avg Train Loss over {epochs} runs",
+        label=f"Avg Train Loss over {num_of_runs} runs",
         color="blue",
         linestyle="--",
         linewidth=4,
@@ -184,7 +186,7 @@ def multiple_runs_with_every_run(metrics_list, title_accuracy, title_loss):
     plt.plot(
         range(epochs),
         avg_test_loss,
-        label=f"Avg Test Loss over {epochs} runs",
+        label=f"Avg Test Loss over {num_of_runs} runs",
         color="red",
         linestyle="--",
         linewidth=4,
