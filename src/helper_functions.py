@@ -85,9 +85,10 @@ def accuracy_fn(y_true, y_pred):
     return acc
 
 
-def print_train_time(start, end, device=None):
+def print_train_time(start, end, device=None, silent=False):
     total_time = end - start
-    print(f"\nTrain time on {device}: {total_time:.3f} seconds")
+    if not silent:
+        print(f"\nTrain time on {device}: {total_time:.3f} seconds")
     return total_time
 
 
@@ -124,6 +125,8 @@ def run_model(
         metrics["test_acc"].append(test_acc)
 
     time_end = timer()
-    total_time = print_train_time(start=time_start, end=time_end, device=device)
+    total_time = print_train_time(
+        start=time_start, end=time_end, device=device, silent=silent
+    )
 
     return metrics, total_time
