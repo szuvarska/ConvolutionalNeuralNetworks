@@ -99,16 +99,23 @@ def plot_confusion_matrix(model, data_root, split='test', batch_size=32, class_n
 
 
 class FewShotConvNeXt(nn.Module):
-    def __init__(self, num_classes=10):
+    def __init__(self, num_classes=10, dropout=0.0):
         super(FewShotConvNeXt, self).__init__()
         self.backbone = timm.create_model('convnext_tiny', pretrained=True)  # Load pretrained ConvNeXt-Tiny
-        self.backbone.head.fc = nn.Linear(self.backbone.head.fc.in_features, num_classes)  # Modify last layer
+
+        if dropout > 0.0:
+            self.backbone.head.fc = nn.Sequential(
+                nn.Linear(self.backbone.head.fc.in_features, num_classes),
+                nn.Dropout(dropout)
+            )
+        else:
+            self.backbone.head.fc = nn.Linear(self.backbone.head.fc.in_features, num_classes)  # Modify last layer
 
     def forward(self, x):
         return self.backbone(x)
 
 
-def train_few_shot_convnext(model, dataloader, epochs=10, lr=0.001):
+def train_few_shot_convnext(model, dataloader, epochs=10, lr=0.001, weight_decay=None):
     # Freeze all layers
     for param in model.backbone.parameters():
         param.requires_grad = False
@@ -127,7 +134,10 @@ def train_few_shot_convnext(model, dataloader, epochs=10, lr=0.001):
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    if weight_decay is not None:
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(epochs):
         model.train()
