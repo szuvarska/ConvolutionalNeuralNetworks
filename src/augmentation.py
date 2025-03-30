@@ -28,23 +28,34 @@ def random_color_jitter(image):
 
 # Advanced augmentation - CutMix
 def cutmix(image1, image2, alpha=1.0):
-    """Apply CutMix augmentation to combine image1 and image2."""
-    w, h = image1.size
-    box_width = int(np.random.uniform(0.2, 0.7) * w)
-    box_height = int(np.random.uniform(0.2, 0.7) * h)
+    """Apply CutMix augmentation by mixing patches from two images."""
+    if not isinstance(image1, Image.Image) or not isinstance(image2, Image.Image):
+        raise TypeError("Both inputs should be PIL Image objects")
 
-    # Randomly choose the position of the box to cut
-    x1 = np.random.randint(0, w - box_width)
-    y1 = np.random.randint(0, h - box_height)
+    # Get image dimensions (corrected method call)
+    w, h = image1.size
+
+    # Sample λ (lambda) from Beta distribution using the given alpha
+    lam = np.random.beta(alpha, alpha)
+
+    # Compute bounding box for cut region
+    box_width = int(w * np.sqrt(1 - lam))
+    box_height = int(h * np.sqrt(1 - lam))
+
+    x1 = random.randint(0, w - box_width)
+    y1 = random.randint(0, h - box_height)
     x2 = x1 + box_width
     y2 = y1 + box_height
 
-    # Apply the cut to image1
-    image1 = np.array(image1)
-    image2 = np.array(image2)
-    image1[y1:y2, x1:x2, :] = image2[y1:y2, x1:x2, :]
+    # Convert images to NumPy arrays for modification
+    image1_np = np.array(image1)
+    image2_np = np.array(image2)
 
-    return Image.fromarray(image1)
+    # Replace the selected region in image1 with corresponding region from image2
+    image1_np[y1:y2, x1:x2, :] = image2_np[y1:y2, x1:x2, :]
+
+    # Convert back to PIL Image
+    return Image.fromarray(image1_np)
 
 
 def augment_standard_and_save(dataset, augmentations, output_dir):
@@ -77,28 +88,44 @@ def augment_standard_and_save(dataset, augmentations, output_dir):
         augmented_image.save(os.path.join(class_dirs[class_name], image_name))
 
 
-def augment_with_cutmix_and_save(dataset, output_dir):
+def augment_with_cutmix_and_save(dataset, output_dir, alpha=1.0):
+    """Applies CutMix augmentation and saves augmented images."""
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     class_names = dataset.classes
     class_dirs = {class_name: os.path.join(output_dir, class_name) for class_name in class_names}
 
-    # Create directories for each class if they don't exist
+    # Create class directories
     for class_dir in class_dirs.values():
         if not os.path.exists(class_dir):
             os.makedirs(class_dir)
 
-    for idx in range(0, len(dataset), 2):
-        image1, label1 = dataset[idx]
-        image2, label2 = dataset[idx + 1] if idx + 1 < len(dataset) else dataset[idx]
+    dataset_length = len(dataset)
+
+    for idx, (image1, label1) in enumerate(dataset):
+        # Convert Tensor to PIL Image before augmentation
+        if isinstance(image1, torch.Tensor):
+            image1 = transforms.ToPILImage()(image1)
+
+        # Select a second random image from the dataset
+        idx2 = random.randint(0, dataset_length - 1)
+        image2, label2 = dataset[idx2]
+
+        # Convert Tensor to PIL Image before augmentation
+        if isinstance(image2, torch.Tensor):
+            image2 = transforms.ToPILImage()(image2)
 
         # Apply CutMix
-        augmented_image = cutmix(image1, image2)
+        augmented_image = cutmix(image1, image2, alpha=alpha)
+
+        # Convert back to tensor (if needed)
+        augmented_image = transforms.ToTensor()(augmented_image)
 
         # Save the augmented image
         class_name = class_names[label1]
         image_name = f"cutmix_{idx}.png"
+        augmented_image = transforms.ToPILImage()(augmented_image)  # Convert back to PIL before saving
         augmented_image.save(os.path.join(class_dirs[class_name], image_name))
 
 
@@ -149,3 +176,6 @@ augment_standard_and_save(train_dataset, augmentation_1, f'{output_dir_prefix}fl
 augment_standard_and_save(train_dataset, augmentation_2, f'{output_dir_prefix}rotation')
 augment_standard_and_save(train_dataset, augmentation_3, f'{output_dir_prefix}jitter')
 augment_standard_and_save(train_dataset, augmentation_mixed, f'{output_dir_prefix}mixed')
+
+# Apply CutMix augmentation and save the dataset
+augment_with_cutmix_and_save(train_dataset, f'{output_dir_prefix}cutmix')
