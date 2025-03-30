@@ -13,8 +13,11 @@ import torch.optim as optim
 import numpy as np
 
 
-def load_cinic10(data_root, split='train', few_shot_per_class=10, batch_size=16):
-    data_dir = os.path.join(data_root, "cinic-10", split)
+def load_cinic10(data_root, split='train', few_shot_per_class=10, batch_size=16, dataset_name="cinic-10"):
+    if split not in ['train', 'test']:
+        data_dir = os.path.join(data_root, dataset_name)
+    else:
+        data_dir = os.path.join(data_root, dataset_name, split)
 
     transform = transforms.Compose([
         transforms.Resize((32, 32)),  # Ensure images are 32x32
