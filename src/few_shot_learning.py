@@ -12,6 +12,8 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from PIL import Image
+import torch.nn.functional as F
+from helper_functions import train_step, accuracy_fn, test_step, print_train_time
 
 def load_cinic10(data_root, split='train', few_shot_per_class=10, batch_size=16, dataset_name="cinic-10"):
     if split not in ['train', 'test']:
@@ -116,7 +118,10 @@ class FewShotConvNeXt(nn.Module):
         return self.backbone(x)
 
 
-def train_few_shot_convnext(model, dataloader, epochs=10, lr=0.001, weight_decay=None):
+def train_few_shot_convnext(model, train_dataloader, test_dataloader, epochs=10, lr=0.001, optimizer='adam',
+                            scheduling=False, silent=False, weight_decay=None):
+    time_start = timer()
+    metrics = {"train_loss": [], "train_acc": [], "test_loss": [], "test_acc": []}
     # Freeze all layers
     for param in model.backbone.parameters():
         param.requires_grad = False
@@ -135,34 +140,50 @@ def train_few_shot_convnext(model, dataloader, epochs=10, lr=0.001, weight_decay
     model.to(device)
 
     criterion = nn.CrossEntropyLoss()
-    if weight_decay is not None:
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    else:
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+    if optimizer == 'adam':
+        if weight_decay is not None:
+            optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        else:
+            optimizer = optim.Adam(model.parameters(), lr=lr)
+        if scheduling:
+            scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+    elif optimizer == 'sgd':
+        optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
+        if scheduling:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
 
     for epoch in range(epochs):
-        model.train()
-        running_loss = 0.0
-        total_correct = 0
-        total_samples = 0
+        train_loss, train_acc = train_step(
+            data_loader=train_dataloader,
+            model=model,
+            loss_fn=criterion,
+            optimizer=optimizer,
+            accuracy_fn=accuracy_fn,
+            device=device,
+            silent=silent,
+        )
+        if scheduling:
+            scheduler.step()  # Update LR
+        test_loss, test_acc = test_step(
+            data_loader=test_dataloader,
+            model=model,
+            loss_fn=criterion,
+            accuracy_fn=accuracy_fn,
+            device=device,
+            silent=silent,
+        )
 
-        for images, labels in dataloader:  # Load few-shot dataset
-            images, labels = images.to(device), labels.to(device)
+        # Append the metrics to the respective lists
+        metrics["train_loss"].append(train_loss)
+        metrics["train_acc"].append(train_acc)
+        metrics["test_loss"].append(test_loss)
+        metrics["test_acc"].append(test_acc)
 
-            optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            running_loss += loss.item()
-
-            _, predicted = torch.max(outputs, 1)
-            total_correct += (predicted == labels).sum().item()
-            total_samples += labels.size(0)
-
-        accuracy = (total_correct / total_samples) * 100
-        print(f"Epoch [{epoch + 1}/{epochs}], Loss: {running_loss:.4f}, Accuracy: {accuracy:.2f}%")
+    time_end = timer()
+    total_time = print_train_time(
+        start=time_start, end=time_end, device=device, silent=silent
+    )
+    return metrics, total_time
 
 
 def set_seed(seed_value: int):
