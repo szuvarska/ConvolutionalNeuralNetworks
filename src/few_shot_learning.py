@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-
+from PIL import Image
 
 def load_cinic10(data_root, split='train', few_shot_per_class=10, batch_size=16, dataset_name="cinic-10"):
     if split not in ['train', 'test']:
@@ -68,14 +68,12 @@ def calculate_accuracy(model, data_root, split='test', batch_size=32):
     return accuracy
 
 
-def plot_confusion_matrix(model, data_root, split='test', batch_size=32, class_names=None):
+def plot_confusion_matrix(model, test_loader, class_names=None, title="Confusion Matrix"):
     if class_names is None:
         class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
-
-    test_loader = load_cinic10(data_root, split=split, few_shot_per_class=1000, batch_size=batch_size)
 
     y_true = []
     y_pred = []
@@ -97,7 +95,7 @@ def plot_confusion_matrix(model, data_root, split='test', batch_size=32, class_n
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
-    plt.title(f"Confusion Matrix on {split} set")
+    plt.title(title)
     plt.show()
 
 
@@ -174,3 +172,27 @@ def set_seed(seed_value: int):
     torch.cuda.manual_seed_all(seed_value)  # For GPU
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+
+def predict_image(model, image_path, class_names=None, device='cuda' if torch.cuda.is_available() else 'cpu'):
+    if class_names is None:
+        class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    transform = transforms.Compose([
+        transforms.Resize((32, 32)),  # Ensure size matches training input
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+
+    image = Image.open(image_path).convert("RGB")  # Ensure it's in RGB mode
+    image = transform(image).unsqueeze(0)  # Add batch dimension
+
+    model.to(device)
+    model.eval()
+
+    with torch.no_grad():
+        image = image.to(device)
+        output = model(image)
+        probabilities = F.softmax(output, dim=1)  # Convert to probabilities
+        predicted_class = torch.argmax(probabilities, dim=1).item()
+
+    return class_names[predicted_class]
