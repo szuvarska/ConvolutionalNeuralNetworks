@@ -13,7 +13,8 @@ import torch.optim as optim
 import numpy as np
 from PIL import Image
 import torch.nn.functional as F
-from helper_functions import train_step, accuracy_fn, test_step, print_train_time
+from src.helper_functions import train_step, accuracy_fn, test_step, print_train_time
+from timeit import default_timer as timer
 
 def load_cinic10(data_root, split='train', few_shot_per_class=10, batch_size=16, dataset_name="cinic-10"):
     if split not in ['train', 'test']:
