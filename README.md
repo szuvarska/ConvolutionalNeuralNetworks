@@ -5,10 +5,10 @@ Authors:
 - Marta Szurwarska
 - Mateusz Nizwantowski
 
-This is the repository for the three projects in the Deep Learning course in Data Science Masters at the Faculty of Mathematics and Information Science. Here we:
+This repository contains the three projects from the Deep Learning course in the Data Science Master's program at the Faculty of Mathematics and Information Science. In these projects, we:
 
-1. implement and thourly test convolutional neural networks (CNNs) to classify objects at image
-2. create a solution using transformers architecture to recognize voice commands
-3. train various gerative models to create pictures of cats
+1. Implement and thoroughly test convolutional neural networks (CNNs) to classify objects in images.
+2. Develop a solution using transformer architecture to recognize voice commands.
+3. Train various generative models to create pictures of cats.
 
-This work's goal is purely educational and research-focused. We aim not to create the best possible models  but to learn as much as possible.
+The goal of this work is purely educational and research-focused. We aim not to create the best possible models, but to learn as much as possible.
