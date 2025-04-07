@@ -6,3 +6,4 @@ models/
 venv_deep_learning/
 /.venv/
 /data/
+transformer_venv
