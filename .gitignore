@@ -2,7 +2,6 @@
 __pycache__/
 *.ipynb_checkpoints/
 data/
-models/
-venv_deep_learning/
 /.venv/
-/data/
+transformer_venv
+venv_deep_learning

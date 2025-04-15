@@ -2,7 +2,7 @@
 
 Authors:
 
-- Marta Szurwarska
+- Marta Szuwarska
 - Mateusz Nizwantowski
 
 This repository contains the three projects from the Deep Learning course in the Data Science Master's program at the Faculty of Mathematics and Information Science. In these projects, we:
