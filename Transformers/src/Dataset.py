@@ -56,3 +56,7 @@ class SpeechCommandsDataset(Dataset):
             waveform = self.transform(waveform)
 
         return waveform, label
+
+    @property
+    def class_to_idx(self):
+        return self.label_to_index
