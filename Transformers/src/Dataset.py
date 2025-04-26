@@ -32,7 +32,7 @@ class SpeechCommandsDataset(Dataset):
         if self.mode == "modified":
             if commands is None:
                 commands = [
-                    "yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go"
+                    "yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go", "silence"
                 ]
             self.labels = sorted(commands + ["unknown"])
         else:
