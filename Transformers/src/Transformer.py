@@ -1,6 +1,6 @@
 import sys
 from Dataset import SpeechCommandsDataset
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,6 +10,12 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import torchaudio.transforms as T
 from tqdm import tqdm
 from collections import Counter
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -170,7 +176,7 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
                   f"Train Accuracy: {100. * train_acc:.2f}, Test Accuracy: {100. * test_acc:.2f}%")
 
         # Early stopping
-        if abs(best_test_acc - test_acc) < 1e-5:
+        if abs(best_test_acc - test_acc) > 1e-5:
             best_test_acc = test_acc
             best_train_acc = train_acc
             best_model_state = model.state_dict()
@@ -231,13 +237,46 @@ def calculate_class_weights(dataset):
     class_weights = class_weights / class_weights.sum()
     return class_weights
 
+def plot_confusion_matrix(model, dataset, data_loader, device=None, normalize=False):
+    model.eval()
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    true_labels = []
+    pred_labels = []
+    with torch.no_grad():
+        for waveforms, labels in data_loader:
+            waveforms = waveforms.squeeze(1).to(device)
+            labels = labels.to(device)
+
+            outputs = model(waveforms)
+            _, preds = torch.max(outputs, 1)
+
+            true_labels.extend(labels.cpu().numpy())
+            pred_labels.extend(preds.cpu().numpy())
+
+    cm = confusion_matrix(true_labels, pred_labels)
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    label_names = list(dataset.class_to_idx.keys())
+
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=label_names)
+    fig, ax = plt.subplots(figsize=(12, 12))
+    disp.plot(include_values=True, xticks_rotation="vertical", ax=ax, cmap="Blues")
+    plt.title("Confusion Matrix")
+    plt.show()
+    return plt
+
 
 if __name__ == "__main__":
     train_dataset = SpeechCommandsDataset("../data/train", mode="modified")
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=6)
+    indices = torch.randperm(len(train_dataset))[:1000]
+    sampler = SubsetRandomSampler(indices)
+    train_loader = DataLoader(train_dataset, batch_size=16, num_workers=6, sampler=sampler)
 
     test_dataset = SpeechCommandsDataset("../data/test", mode="modified")
-    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False, num_workers=6)
+    limited_test_dataset = Subset(test_dataset, range(1000))
+    test_loader = DataLoader(limited_test_dataset, batch_size=16, shuffle=False, num_workers=6)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = SpeechCommandTransformer(num_classes=len(train_dataset.class_to_idx), device=device, stride=2).to(device)
@@ -245,4 +284,6 @@ if __name__ == "__main__":
     class_weights = calculate_class_weights(train_dataset)
     criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 
-    train_transformer(train_loader, test_loader, model=model, num_epochs=10, device=device, criterion=criterion)
+    train_transformer(train_loader, test_loader, model=model, num_epochs=1, device=device, criterion=criterion)
+
+    plot_confusion_matrix(model, train_dataset, train_loader, device=device, normalize=False)
