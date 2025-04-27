@@ -8,8 +8,8 @@ import torchaudio
 from torch import optim
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import torchaudio.transforms as T
-from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
+from collections import Counter
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -18,7 +18,7 @@ torch.cuda.empty_cache()
 
 class SpeechCommandTransformer(nn.Module):
     def __init__(self, num_classes: int, n_mels: int = 64, embed_dim: int = 64, num_layers: int = 4, num_heads: int = 4,
-                 device: torch.device = None):
+                 device: torch.device = None, stride: int = 1, dim_feedforward: int = 512, pos_embedding: bool = False):
         super().__init__()
 
         self.device = device if device else torch.device("cpu")
@@ -33,20 +33,23 @@ class SpeechCommandTransformer(nn.Module):
         self.db = torchaudio.transforms.AmplitudeToDB()
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.Conv2d(1, 32, kernel_size=3, stride=stride, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.Conv2d(32, 64, kernel_size=3, stride=stride, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU()
         )
 
         self.projection = nn.Linear(n_mels, embed_dim)  # Project mel bins to embed_dim
 
+        if pos_embedding:
+            self.pos_embedding = nn.Parameter(torch.randn(1, 1, embed_dim))
+
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=embed_dim,
             nhead=num_heads,
-            dim_feedforward=512,
+            dim_feedforward=dim_feedforward,
             dropout=0.1,
             activation="gelu",
             batch_first=True
@@ -76,6 +79,9 @@ class SpeechCommandTransformer(nn.Module):
 
         x = self.projection(features)  # (batch_size, seq_len, embed_dim)
 
+        if hasattr(self, 'pos_embedding'):
+            x += self.pos_embedding[:, :x.size(1), :]  # Add positional embedding
+
         # Add CLS token
         batch_size = x.size(0)
         cls_tokens = self.cls_token.expand(batch_size, -1, -1)  # (batch_size, 1, embed_dim)
@@ -90,7 +96,7 @@ class SpeechCommandTransformer(nn.Module):
         return logits
 
 
-def train_transformer(train_loader, test_loader, model, criterion=None, optimizer=None, scheduler=None,
+def train_transformer(train_loader, test_loader, model, criterion=None, optimizer=None, scheduler=None, scheduling=True,
                       num_epochs: int = 10,
                       device: torch.device = None, verbose: bool = True, patience: int = 3):
     if device is None:
@@ -99,7 +105,7 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
         criterion = nn.CrossEntropyLoss()
     if optimizer is None:
         optimizer = optim.Adam(model.parameters(), lr=0.001)
-    if scheduler is None:
+    if scheduler is None and scheduling:
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     best_model_state = None
@@ -136,7 +142,8 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
 
             pbar.set_postfix(loss=running_loss / total, acc=100. * correct / total)
 
-        scheduler.step()
+        if scheduling:
+            scheduler.step()
 
         train_acc = correct / total
         train_loss = running_loss / total
@@ -163,7 +170,7 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
                   f"Train Accuracy: {100. * train_acc:.2f}, Test Accuracy: {100. * test_acc:.2f}%")
 
         # Early stopping
-        if test_acc > best_test_acc:
+        if abs(best_test_acc - test_acc) < 1e-5:
             best_test_acc = test_acc
             best_train_acc = train_acc
             best_model_state = model.state_dict()
@@ -213,6 +220,17 @@ def test_transformer(test_loader, model, device: torch.device = None, criterion=
     print(f"Test Accuracy: {100. * accuracy:.2f}%")
     return accuracy, avg_loss
 
+def calculate_class_weights(dataset):
+    labels = [label for _, label in dataset.samples]
+    label_counts = Counter(labels)
+    total_samples = sum(label_counts.values())
+    class_weights = torch.tensor(
+        [total_samples / label_counts[i] for i in range(len(dataset.class_to_idx))],
+        dtype=torch.float
+    )
+    class_weights = class_weights / class_weights.sum()
+    return class_weights
+
 
 if __name__ == "__main__":
     train_dataset = SpeechCommandsDataset("../data/train", mode="modified")
@@ -222,6 +240,9 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False, num_workers=6)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = SpeechCommandTransformer(num_classes=len(train_dataset.class_to_idx), device=device).to(device)
+    model = SpeechCommandTransformer(num_classes=len(train_dataset.class_to_idx), device=device, stride=2).to(device)
 
-    train_transformer(train_loader, test_loader, model=model, num_epochs=10, device=device)
+    class_weights = calculate_class_weights(train_dataset)
+    criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
+
+    train_transformer(train_loader, test_loader, model=model, num_epochs=10, device=device, criterion=criterion)
