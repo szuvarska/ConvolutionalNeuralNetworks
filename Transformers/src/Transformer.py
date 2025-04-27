@@ -90,8 +90,9 @@ class SpeechCommandTransformer(nn.Module):
         return logits
 
 
-def train_transformer(train_loader, model, criterion=None, optimizer=None, scheduler=None, num_epochs: int = 10,
-                      device: torch.device = None):
+def train_transformer(train_loader, test_loader, model, criterion=None, optimizer=None, scheduler=None,
+                      num_epochs: int = 10,
+                      device: torch.device = None, verbose: bool = True, patience: int = 3):
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if criterion is None:
@@ -101,7 +102,10 @@ def train_transformer(train_loader, model, criterion=None, optimizer=None, sched
     if scheduler is None:
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
-    scaler = torch.amp.GradScaler()
+    best_model_state = None
+    best_train_acc = 0.0
+    best_test_acc = 0.0
+    patience_counter = 0
 
     for epoch in range(num_epochs):
 
@@ -110,7 +114,7 @@ def train_transformer(train_loader, model, criterion=None, optimizer=None, sched
         correct = 0
         total = 0
 
-        pbar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{num_epochs}")
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{num_epochs}", leave=False)
 
         for waveforms, labels in pbar:
             waveforms = waveforms.squeeze(1).to(device)  # (batch_size, samples)
@@ -134,15 +138,90 @@ def train_transformer(train_loader, model, criterion=None, optimizer=None, sched
 
         scheduler.step()
 
-        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {running_loss / len(train_loader):.4f}, "
-              f"Accuracy: {100. * correct / total:.2f}%")
+        train_acc = correct / total
+        train_loss = running_loss / total
+
+        model.eval()
+        test_correct = 0
+        test_total = 0
+
+        with torch.no_grad():
+            for waveforms, labels in test_loader:
+                waveforms = waveforms.squeeze(1).to(device)
+                labels = labels.to(device)
+
+                outputs = model(waveforms)
+                preds = outputs.argmax(dim=1)
+
+                test_correct += (preds == labels).sum().item()
+                test_total += labels.size(0)
+
+        test_acc = test_correct / test_total
+
+        if verbose:
+            print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, "
+                  f"Train Accuracy: {100. * train_acc:.2f}, Test Accuracy: {100. * test_acc:.2f}%")
+
+        # Early stopping
+        if test_acc > best_test_acc:
+            best_test_acc = test_acc
+            best_train_acc = train_acc
+            best_model_state = model.state_dict()
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"Early stopping at epoch {epoch + 1}")
+                break
+
+    if verbose:
+        print(f"Best Test Accuracy: {100. * best_test_acc:.2f}%, Best Train Accuracy: {100. * best_train_acc:.2f}%")
+
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
+
+
+def test_transformer(test_loader, model, device: torch.device = None, criterion=None):
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    model.eval()
+    model.to(device)
+    if criterion is None:
+        criterion = nn.CrossEntropyLoss()
+
+    correct = 0
+    total = 0
+    total_loss = 0.0
+
+    with torch.no_grad():
+        for waveforms, labels in test_loader:
+            waveforms = waveforms.squeeze(1).to(device)
+            labels = labels.to(device)
+
+            outputs = model(waveforms)
+            loss = criterion(outputs, labels)
+
+            preds = outputs.argmax(dim=1)
+
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
+            total_loss += loss.item() * labels.size(0)
+
+    avg_loss = total_loss / total if total > 0 else 0
+    accuracy = correct / total if total > 0 else 0
+    print(f"Test Accuracy: {100. * accuracy:.2f}%")
+    return accuracy, avg_loss
 
 
 if __name__ == "__main__":
     train_dataset = SpeechCommandsDataset("../data/train", mode="modified")
     train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=6)
 
+    test_dataset = SpeechCommandsDataset("../data/test", mode="modified")
+    test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False, num_workers=6)
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = SpeechCommandTransformer(num_classes=len(train_dataset.class_to_idx), device=device).to(device)
 
-    train_transformer(train_loader, model=model, num_epochs=10, device=device)
+    train_transformer(train_loader, test_loader, model=model, num_epochs=10, device=device)
