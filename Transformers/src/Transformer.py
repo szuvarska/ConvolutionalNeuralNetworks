@@ -11,7 +11,9 @@ import torchaudio.transforms as T
 from tqdm import tqdm
 from collections import Counter
 import matplotlib
-matplotlib.use('TkAgg')
+import random
+
+matplotlib.use('inline')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -119,6 +121,16 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
     best_test_acc = 0.0
     patience_counter = 0
 
+    train_losses = []
+    train_accuracies = []
+    test_losses = []
+    test_accuracies = []
+
+    train_true_labels = []
+    train_pred_labels = []
+    test_true_labels = []
+    test_pred_labels = []
+
     for epoch in range(num_epochs):
 
         model.train()
@@ -148,15 +160,22 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
 
             pbar.set_postfix(loss=running_loss / total, acc=100. * correct / total)
 
+            train_true_labels.extend(labels.cpu().numpy())
+            train_pred_labels.extend(preds.cpu().numpy())
+
         if scheduling:
             scheduler.step()
 
         train_acc = correct / total
         train_loss = running_loss / total
 
+        train_losses.append(train_loss)
+        train_accuracies.append(train_acc)
+
         model.eval()
         test_correct = 0
         test_total = 0
+        test_loss = 0.0
 
         with torch.no_grad():
             for waveforms, labels in test_loader:
@@ -164,12 +183,21 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
                 labels = labels.to(device)
 
                 outputs = model(waveforms)
+                loss = criterion(outputs, labels)
                 preds = outputs.argmax(dim=1)
 
                 test_correct += (preds == labels).sum().item()
                 test_total += labels.size(0)
+                test_loss += loss.item() * labels.size(0)
 
-        test_acc = test_correct / test_total
+                test_true_labels.extend(labels.cpu().numpy())
+                test_pred_labels.extend(preds.cpu().numpy())
+
+        test_acc = test_correct / test_total if test_total > 0 else 0
+        test_loss = test_loss / test_total if test_total > 0 else 0
+
+        test_losses.append(test_loss)
+        test_accuracies.append(test_acc)
 
         if verbose:
             print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, "
@@ -192,6 +220,9 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
 
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
+
+    return (train_losses, train_accuracies, test_losses, test_accuracies, train_true_labels,
+            train_pred_labels, test_true_labels, test_pred_labels)
 
 
 def test_transformer(test_loader, model, device: torch.device = None, criterion=None):
@@ -226,6 +257,7 @@ def test_transformer(test_loader, model, device: torch.device = None, criterion=
     print(f"Test Accuracy: {100. * accuracy:.2f}%")
     return accuracy, avg_loss
 
+
 def calculate_class_weights(dataset):
     labels = [label for _, label in dataset.samples]
     label_counts = Counter(labels)
@@ -237,23 +269,8 @@ def calculate_class_weights(dataset):
     class_weights = class_weights / class_weights.sum()
     return class_weights
 
-def plot_confusion_matrix(model, dataset, data_loader, device=None, normalize=False):
-    model.eval()
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    true_labels = []
-    pred_labels = []
-    with torch.no_grad():
-        for waveforms, labels in data_loader:
-            waveforms = waveforms.squeeze(1).to(device)
-            labels = labels.to(device)
 
-            outputs = model(waveforms)
-            _, preds = torch.max(outputs, 1)
-
-            true_labels.extend(labels.cpu().numpy())
-            pred_labels.extend(preds.cpu().numpy())
-
+def plot_confusion_matrix(true_labels, pred_labels, dataset, normalize=False):
     cm = confusion_matrix(true_labels, pred_labels)
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -266,6 +283,45 @@ def plot_confusion_matrix(model, dataset, data_loader, device=None, normalize=Fa
     plt.title("Confusion Matrix")
     plt.show()
     return plt
+
+
+def plot_accuracy_loss(train_accuracies, train_losses, test_accuracies, test_losses):
+    epochs = range(1, len(train_losses) + 1)
+
+    # Loss
+    plt.figure(figsize=(10, 5))
+    plt.plot(epochs, train_losses, label='Train Loss')
+    plt.plot(epochs, test_losses, label='Test Loss')
+    plt.title('Loss over epochs')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend(loc="best")
+    plt.grid(True)
+    plt.xlim(1, len(train_losses))
+    plt.xticks(epochs)
+    plt.show()
+
+    # Accuracy
+    plt.figure(figsize=(10, 5))
+    plt.plot(epochs, train_accuracies, label='Train Accuracy')
+    plt.plot(epochs, test_accuracies, label='Test Accuracy')
+    plt.title('Accuracy over epochs')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend(loc="best")
+    plt.grid(True)
+    plt.xlim(1, len(train_accuracies))
+    plt.ylim(max(0, min(train_accuracies + test_accuracies)), max(train_accuracies + test_accuracies))
+    plt.xticks(epochs)
+    plt.show()
+
+def set_seed(seed_value: int):
+    random.seed(seed_value)
+    np.random.seed(seed_value)
+    torch.manual_seed(seed_value)  # For CPU
+    torch.cuda.manual_seed_all(seed_value)  # For GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 if __name__ == "__main__":
@@ -284,6 +340,10 @@ if __name__ == "__main__":
     class_weights = calculate_class_weights(train_dataset)
     criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 
-    train_transformer(train_loader, test_loader, model=model, num_epochs=1, device=device, criterion=criterion)
+    (train_losses, train_accuracies, test_losses, test_accuracies, train_true_labels, train_pred_labels,
+     test_true_labels, test_pred_labels) = train_transformer(
+        train_loader, test_loader, model=model, num_epochs=10, device=device, criterion=criterion)
 
-    plot_confusion_matrix(model, train_dataset, train_loader, device=device, normalize=False)
+    plot_confusion_matrix(train_true_labels, train_pred_labels, train_dataset, normalize=False)
+
+    plot_accuracy_loss(train_accuracies, train_losses, test_accuracies, test_losses)
