@@ -13,7 +13,7 @@ from collections import Counter
 import matplotlib
 import random
 
-matplotlib.use('inline')
+# matplotlib.use('inline')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -281,6 +281,7 @@ def plot_confusion_matrix(true_labels, pred_labels, dataset, normalize=False):
     fig, ax = plt.subplots(figsize=(12, 12))
     disp.plot(include_values=True, xticks_rotation="vertical", ax=ax, cmap="Blues")
     plt.title("Confusion Matrix")
+    plt.grid(False)
     plt.show()
     return plt
 
