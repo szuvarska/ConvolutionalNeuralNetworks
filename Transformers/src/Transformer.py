@@ -12,8 +12,7 @@ from tqdm import tqdm
 from collections import Counter
 import matplotlib
 import random
-
-matplotlib.use("inline")
+# matplotlib.use('inline')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -25,18 +24,9 @@ torch.cuda.empty_cache()
 
 
 class SpeechCommandTransformer(nn.Module):
-    def __init__(
-        self,
-        num_classes: int,
-        n_mels: int = 64,
-        embed_dim: int = 64,
-        num_layers: int = 4,
-        num_heads: int = 4,
-        device: torch.device = None,
-        stride: int = 1,
-        dim_feedforward: int = 512,
-        pos_embedding: bool = False,
-    ):
+    def __init__(self, num_classes: int, n_mels: int = 64, embed_dim: int = 64, num_layers: int = 4, num_heads: int = 4,
+                 device: torch.device = None, stride: int | list = 1, dim_feedforward: int = 512,
+                 pos_embedding: bool = False, cnn_type: int = 1):
         super().__init__()
 
         self.device = device if device else torch.device("cpu")
@@ -47,14 +37,54 @@ class SpeechCommandTransformer(nn.Module):
 
         self.db = torchaudio.transforms.AmplitudeToDB()
 
-        self.cnn = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, stride=stride, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=stride, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-        )
+        if isinstance(stride, int):
+            stride1 = stride
+            stride2 = stride
+        else:
+            stride1 = stride[0]
+            stride2 = stride[1]
+
+        if cnn_type == 1:
+            self.cnn = nn.Sequential(
+                nn.Conv2d(1, 32, kernel_size=3, stride=stride1, padding=1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                nn.Conv2d(32, 64, kernel_size=3, stride=stride2, padding=1),
+                nn.BatchNorm2d(64),
+                nn.ReLU()
+            )
+        elif cnn_type == 2:
+            self.cnn = nn.Sequential(
+                nn.Conv2d(1, 32, kernel_size=3, stride=stride1, padding=1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                nn.Conv2d(32, 64, kernel_size=3, stride=stride2, padding=1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(),
+                nn.Conv2d(64, 128, kernel_size=3, stride=stride2, padding=1),
+                nn.BatchNorm2d(128),
+                nn.ReLU()
+            )
+        elif cnn_type == 3:
+            self.cnn = nn.Sequential(
+                nn.Conv2d(1, 32, kernel_size=3, stride=stride1, padding=1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2, stride=2),
+                nn.Conv2d(32, 64, kernel_size=3, stride=stride2, padding=1),
+                nn.BatchNorm2d(64),
+                nn.ReLU()
+            )
+        elif cnn_type == 4:
+            self.cnn = nn.Sequential(
+                nn.Conv2d(1, 32, kernel_size=3, stride=stride1, padding=1),
+                nn.BatchNorm2d(32),
+                nn.ReLU(),
+                nn.Conv2d(32, 64, kernel_size=3, stride=stride2, padding=1),
+                nn.BatchNorm2d(64),
+                nn.ReLU(),
+                nn.MaxPool2d(kernel_size=2, stride=2),
+            )
 
         self.projection = nn.Linear(n_mels, embed_dim)  # Project mel bins to embed_dim
 
@@ -316,8 +346,10 @@ def plot_confusion_matrix(true_labels, pred_labels, dataset, normalize=False):
 
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=label_names)
     fig, ax = plt.subplots(figsize=(12, 12))
-    disp.plot(include_values=True, xticks_rotation="vertical", ax=ax, cmap="Blues")
+    disp.plot(include_values=True, xticks_rotation="vertical", ax=ax, cmap="Blues",
+              values_format=".3f" if normalize else None)
     plt.title("Confusion Matrix")
+    plt.grid(False)
     plt.show()
     return plt
 
