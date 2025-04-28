@@ -13,7 +13,7 @@ from collections import Counter
 import matplotlib
 import random
 
-matplotlib.use('inline')
+matplotlib.use("inline")
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -25,17 +25,24 @@ torch.cuda.empty_cache()
 
 
 class SpeechCommandTransformer(nn.Module):
-    def __init__(self, num_classes: int, n_mels: int = 64, embed_dim: int = 64, num_layers: int = 4, num_heads: int = 4,
-                 device: torch.device = None, stride: int = 1, dim_feedforward: int = 512, pos_embedding: bool = False):
+    def __init__(
+        self,
+        num_classes: int,
+        n_mels: int = 64,
+        embed_dim: int = 64,
+        num_layers: int = 4,
+        num_heads: int = 4,
+        device: torch.device = None,
+        stride: int = 1,
+        dim_feedforward: int = 512,
+        pos_embedding: bool = False,
+    ):
         super().__init__()
 
         self.device = device if device else torch.device("cpu")
 
         self.feature_extractor = T.MelSpectrogram(
-            sample_rate=16000,
-            n_fft=400,
-            hop_length=160,
-            n_mels=n_mels
+            sample_rate=16000, n_fft=400, hop_length=160, n_mels=n_mels
         )
 
         self.db = torchaudio.transforms.AmplitudeToDB()
@@ -46,7 +53,7 @@ class SpeechCommandTransformer(nn.Module):
             nn.ReLU(),
             nn.Conv2d(32, 64, kernel_size=3, stride=stride, padding=1),
             nn.BatchNorm2d(64),
-            nn.ReLU()
+            nn.ReLU(),
         )
 
         self.projection = nn.Linear(n_mels, embed_dim)  # Project mel bins to embed_dim
@@ -60,11 +67,15 @@ class SpeechCommandTransformer(nn.Module):
             dim_feedforward=dim_feedforward,
             dropout=0.1,
             activation="gelu",
-            batch_first=True
+            batch_first=True,
         )
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer, num_layers=num_layers
+        )
 
-        self.cls_token = nn.Parameter(torch.randn(1, 1, embed_dim))  # Learnable [CLS] token
+        self.cls_token = nn.Parameter(
+            torch.randn(1, 1, embed_dim)
+        )  # Learnable [CLS] token
 
         self.classifier = nn.Linear(embed_dim, num_classes)
 
@@ -83,16 +94,20 @@ class SpeechCommandTransformer(nn.Module):
         # Flatten the frequency and time dims into a sequence
         batch_size, channels, freq, time = features.shape
         features = features.permute(0, 2, 3, 1)  # (batch_size, freq, time, channels)
-        features = features.reshape(batch_size, freq * time, channels)  # (batch_size, seq_len, channels)
+        features = features.reshape(
+            batch_size, freq * time, channels
+        )  # (batch_size, seq_len, channels)
 
         x = self.projection(features)  # (batch_size, seq_len, embed_dim)
 
-        if hasattr(self, 'pos_embedding'):
-            x += self.pos_embedding[:, :x.size(1), :]  # Add positional embedding
+        if hasattr(self, "pos_embedding"):
+            x += self.pos_embedding[:, : x.size(1), :]  # Add positional embedding
 
         # Add CLS token
         batch_size = x.size(0)
-        cls_tokens = self.cls_token.expand(batch_size, -1, -1)  # (batch_size, 1, embed_dim)
+        cls_tokens = self.cls_token.expand(
+            batch_size, -1, -1
+        )  # (batch_size, 1, embed_dim)
         x = torch.cat((cls_tokens, x), dim=1)  # (batch_size, 1 + time, embed_dim)
 
         x = self.transformer_encoder(x)
@@ -104,9 +119,19 @@ class SpeechCommandTransformer(nn.Module):
         return logits
 
 
-def train_transformer(train_loader, test_loader, model, criterion=None, optimizer=None, scheduler=None, scheduling=True,
-                      num_epochs: int = 10,
-                      device: torch.device = None, verbose: bool = True, patience: int = 3):
+def train_transformer(
+    train_loader,
+    test_loader,
+    model,
+    criterion=None,
+    optimizer=None,
+    scheduler=None,
+    scheduling=True,
+    num_epochs: int = 10,
+    device: torch.device = None,
+    verbose: bool = True,
+    patience: int = 3,
+):
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if criterion is None:
@@ -158,7 +183,7 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
             correct += (preds == labels).sum().item()
             total += labels.size(0)
 
-            pbar.set_postfix(loss=running_loss / total, acc=100. * correct / total)
+            pbar.set_postfix(loss=running_loss / total, acc=100.0 * correct / total)
 
             train_true_labels.extend(labels.cpu().numpy())
             train_pred_labels.extend(preds.cpu().numpy())
@@ -200,8 +225,10 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
         test_accuracies.append(test_acc)
 
         if verbose:
-            print(f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, "
-                  f"Train Accuracy: {100. * train_acc:.2f}, Test Accuracy: {100. * test_acc:.2f}%")
+            print(
+                f"Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss:.4f}, "
+                f"Train Accuracy: {100. * train_acc:.2f}, Test Accuracy: {100. * test_acc:.2f}%"
+            )
 
         # Early stopping
         if abs(best_test_acc - test_acc) > 1e-5:
@@ -216,13 +243,23 @@ def train_transformer(train_loader, test_loader, model, criterion=None, optimize
                 break
 
     if verbose:
-        print(f"Best Test Accuracy: {100. * best_test_acc:.2f}%, Best Train Accuracy: {100. * best_train_acc:.2f}%")
+        print(
+            f"Best Test Accuracy: {100. * best_test_acc:.2f}%, Best Train Accuracy: {100. * best_train_acc:.2f}%"
+        )
 
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
 
-    return (train_losses, train_accuracies, test_losses, test_accuracies, train_true_labels,
-            train_pred_labels, test_true_labels, test_pred_labels)
+    return (
+        train_losses,
+        train_accuracies,
+        test_losses,
+        test_accuracies,
+        train_true_labels,
+        train_pred_labels,
+        test_true_labels,
+        test_pred_labels,
+    )
 
 
 def test_transformer(test_loader, model, device: torch.device = None, criterion=None):
@@ -264,7 +301,7 @@ def calculate_class_weights(dataset):
     total_samples = sum(label_counts.values())
     class_weights = torch.tensor(
         [total_samples / label_counts[i] for i in range(len(dataset.class_to_idx))],
-        dtype=torch.float
+        dtype=torch.float,
     )
     class_weights = class_weights / class_weights.sum()
     return class_weights
@@ -273,7 +310,7 @@ def calculate_class_weights(dataset):
 def plot_confusion_matrix(true_labels, pred_labels, dataset, normalize=False):
     cm = confusion_matrix(true_labels, pred_labels)
     if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
 
     label_names = list(dataset.class_to_idx.keys())
 
@@ -290,11 +327,11 @@ def plot_accuracy_loss(train_accuracies, train_losses, test_accuracies, test_los
 
     # Loss
     plt.figure(figsize=(10, 5))
-    plt.plot(epochs, train_losses, label='Train Loss')
-    plt.plot(epochs, test_losses, label='Test Loss')
-    plt.title('Loss over epochs')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
+    plt.plot(epochs, train_losses, label="Train Loss")
+    plt.plot(epochs, test_losses, label="Test Loss")
+    plt.title("Loss over epochs")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
     plt.legend(loc="best")
     plt.grid(True)
     plt.xlim(1, len(train_losses))
@@ -303,17 +340,21 @@ def plot_accuracy_loss(train_accuracies, train_losses, test_accuracies, test_los
 
     # Accuracy
     plt.figure(figsize=(10, 5))
-    plt.plot(epochs, train_accuracies, label='Train Accuracy')
-    plt.plot(epochs, test_accuracies, label='Test Accuracy')
-    plt.title('Accuracy over epochs')
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
+    plt.plot(epochs, train_accuracies, label="Train Accuracy")
+    plt.plot(epochs, test_accuracies, label="Test Accuracy")
+    plt.title("Accuracy over epochs")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
     plt.legend(loc="best")
     plt.grid(True)
     plt.xlim(1, len(train_accuracies))
-    plt.ylim(max(0, min(train_accuracies + test_accuracies)), max(train_accuracies + test_accuracies))
+    plt.ylim(
+        max(0, min(train_accuracies + test_accuracies)),
+        max(train_accuracies + test_accuracies),
+    )
     plt.xticks(epochs)
     plt.show()
+
 
 def set_seed(seed_value: int):
     random.seed(seed_value)
@@ -328,22 +369,44 @@ if __name__ == "__main__":
     train_dataset = SpeechCommandsDataset("../data/train", mode="modified")
     indices = torch.randperm(len(train_dataset))[:1000]
     sampler = SubsetRandomSampler(indices)
-    train_loader = DataLoader(train_dataset, batch_size=16, num_workers=6, sampler=sampler)
+    train_loader = DataLoader(
+        train_dataset, batch_size=16, num_workers=6, sampler=sampler
+    )
 
     test_dataset = SpeechCommandsDataset("../data/test", mode="modified")
     limited_test_dataset = Subset(test_dataset, range(1000))
-    test_loader = DataLoader(limited_test_dataset, batch_size=16, shuffle=False, num_workers=6)
+    test_loader = DataLoader(
+        limited_test_dataset, batch_size=16, shuffle=False, num_workers=6
+    )
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = SpeechCommandTransformer(num_classes=len(train_dataset.class_to_idx), device=device, stride=2).to(device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = SpeechCommandTransformer(
+        num_classes=len(train_dataset.class_to_idx), device=device, stride=2
+    ).to(device)
 
     class_weights = calculate_class_weights(train_dataset)
     criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 
-    (train_losses, train_accuracies, test_losses, test_accuracies, train_true_labels, train_pred_labels,
-     test_true_labels, test_pred_labels) = train_transformer(
-        train_loader, test_loader, model=model, num_epochs=10, device=device, criterion=criterion)
+    (
+        train_losses,
+        train_accuracies,
+        test_losses,
+        test_accuracies,
+        train_true_labels,
+        train_pred_labels,
+        test_true_labels,
+        test_pred_labels,
+    ) = train_transformer(
+        train_loader,
+        test_loader,
+        model=model,
+        num_epochs=10,
+        device=device,
+        criterion=criterion,
+    )
 
-    plot_confusion_matrix(train_true_labels, train_pred_labels, train_dataset, normalize=False)
+    plot_confusion_matrix(
+        train_true_labels, train_pred_labels, train_dataset, normalize=False
+    )
 
     plot_accuracy_loss(train_accuracies, train_losses, test_accuracies, test_losses)
