@@ -4,6 +4,8 @@ import torch
 from torch.utils.data import Dataset
 import torchaudio
 
+import torchaudio.transforms as T
+
 
 class SpeechCommandsDataset(Dataset):
     def __init__(
@@ -14,16 +16,6 @@ class SpeechCommandsDataset(Dataset):
         mode: str = "original",
         commands: Optional[List[str]] = None,
     ):
-        """
-        Initializes the dataset with the given directory, max length, and optional transform.
-
-        Arguments:
-            root_dir (str): Path to the root directory containing labeled subdirectories of .wav files.
-            max_len (int): The fixed length to pad or truncate the audio to. Default is 16000.
-            transform (callable, optional): An optional transform to be applied on a sample.
-            mode (str): The mode of labels: either "original" or "modified". In case of "modified", non-command labels
-            are grouped into one class "unknown". Default is "original".
-        """
         self.root_dir = Path(root_dir)
         self.max_len = max_len
         self.transform = transform
@@ -31,8 +23,13 @@ class SpeechCommandsDataset(Dataset):
         if self.mode not in ["original", "modified"]:
             self.mode = "original"
 
-        # Get all .wav file paths and corresponding labels
-        self.samples = []
+        # Precompute MFCC transform
+        self.mfcc_transform = T.MFCC(
+            sample_rate=16000,
+            n_mfcc=40,
+            melkwargs={"n_fft": 400, "hop_length": 160, "n_mels": 40},
+        )
+
         all_labels = sorted({p.name for p in self.root_dir.iterdir() if p.is_dir()})
 
         if self.mode == "modified":
@@ -56,6 +53,7 @@ class SpeechCommandsDataset(Dataset):
 
         self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
 
+        self.samples = []
         for label in all_labels:
             label_dir = self.root_dir / label
             for wav_file in label_dir.glob("**/*.wav"):
@@ -69,29 +67,25 @@ class SpeechCommandsDataset(Dataset):
         return len(self.samples)
 
     def pad_or_truncate(self, waveform: torch.Tensor) -> torch.Tensor:
-        """Pads or truncates the waveform to a fixed length (max_len)."""
         if waveform.size(1) > self.max_len:
-            return waveform[:, : self.max_len]  # Truncate
+            return waveform[:, : self.max_len]
         elif waveform.size(1) < self.max_len:
-            padding = torch.zeros(
-                (waveform.size(0), self.max_len - waveform.size(1))
-            )  # Pad
+            padding = torch.zeros((waveform.size(0), self.max_len - waveform.size(1)))
             return torch.cat([waveform, padding], dim=1)
         return waveform
 
     def __getitem__(self, idx) -> Tuple[torch.Tensor, int]:
-        """Returns a single item (waveform, label) from the dataset."""
         audio_path, label = self.samples[idx]
         waveform, sample_rate = torchaudio.load(audio_path)
 
-        # Apply padding/truncation to waveform
         waveform = self.pad_or_truncate(waveform)
 
-        # Apply any additional transformation
-        if self.transform:
-            waveform = self.transform(waveform)
+        features = self.mfcc_transform(waveform)  # (batch, n_mfcc, time)
 
-        return waveform, label
+        if self.transform:
+            features = self.transform(features)
+
+        return features, label
 
     @property
     def class_to_idx(self):
