@@ -6,8 +6,14 @@ import torchaudio
 
 
 class SpeechCommandsDataset(Dataset):
-    def __init__(self, root_dir: str, max_len: int = 16000, transform=None, mode: str = "original", commands:
-    Optional[List[str]] = None):
+    def __init__(
+        self,
+        root_dir: str,
+        max_len: int = 16000,
+        transform=None,
+        mode: str = "original",
+        commands: Optional[List[str]] = None,
+    ):
         """
         Initializes the dataset with the given directory, max length, and optional transform.
 
@@ -15,7 +21,7 @@ class SpeechCommandsDataset(Dataset):
             root_dir (str): Path to the root directory containing labeled subdirectories of .wav files.
             max_len (int): The fixed length to pad or truncate the audio to. Default is 16000.
             transform (callable, optional): An optional transform to be applied on a sample.
-            mode (str): The mode of labels: either "original" or "modified". In case of "modified", non-command labels 
+            mode (str): The mode of labels: either "original" or "modified". In case of "modified", non-command labels
             are grouped into one class "unknown". Default is "original".
         """
         self.root_dir = Path(root_dir)
@@ -32,7 +38,17 @@ class SpeechCommandsDataset(Dataset):
         if self.mode == "modified":
             if commands is None:
                 commands = [
-                    "yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go", "silence"
+                    "yes",
+                    "no",
+                    "up",
+                    "down",
+                    "left",
+                    "right",
+                    "on",
+                    "off",
+                    "stop",
+                    "go",
+                    "silence",
                 ]
             self.labels = sorted(commands + ["unknown"])
         else:
