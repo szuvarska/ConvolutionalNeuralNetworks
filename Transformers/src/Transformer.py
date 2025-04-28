@@ -310,7 +310,7 @@ def calculate_class_weights(dataset):
 def plot_confusion_matrix(true_labels, pred_labels, dataset, normalize=False):
     cm = confusion_matrix(true_labels, pred_labels)
     if normalize:
-        cm = cm.astype("float") / cm.sum(axis=1)[:, np.newaxis]
+        cm = np.round(cm.astype("float") / cm.sum(axis=1)[:, np.newaxis], 3)
 
     label_names = list(dataset.class_to_idx.keys())
 
